@@ -36,17 +36,11 @@ namespace FileProcessing
 {
     public partial class frmTextView : Form
     {
-        /// <summary>
-        /// Initializes a new instance of the frmTextView class.
-        /// </summary>
         public frmTextView()
         {
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Handles the Click event of the Read button by loading the contents of the specified file into the display area.
-        /// </summary>
         private void btRead_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(tbFileName.Text) || !File.Exists(tbFileName.Text))
@@ -59,45 +53,34 @@ namespace FileProcessing
             rtbShow.Text = content;
         }
 
-        /// <summary>
-        /// Handles the Click event of the btReadCSV button, reading CSV data from the specified file and populating the
-        /// DataGridView with its contents.
-        /// </summary>
         private void btReadCSV_Click(object sender, EventArgs e)
         {
-            // ตรวจสอบว่าเลือกไฟล์หรือยัง
             if (string.IsNullOrEmpty(tbFileName.Text) || !File.Exists(tbFileName.Text))
             {
                 MessageBox.Show("กรุณาเลือกไฟล์ CSV ก่อนจ้า!", "แจ้งเตือน");
                 return;
             }
 
-            // เคลียร์ข้อมูลในตารางเก่าออกก่อนทุกครั้งที่กดโหลดใหม่
             dgvData.Rows.Clear();
             dgvData.Columns.Clear();
 
             try
             {
-                // ดึงค่าตัวเลขจากช่อง m และ n บนหน้าจอ (ถ้าช่องว่างจะตั้งค่า Default เป็น 1 และ 500)
                 int m = string.IsNullOrEmpty(txtM.Text) ? 1 : int.Parse(txtM.Text);
                 int n = string.IsNullOrEmpty(txtN.Text) ? 500 : int.Parse(txtN.Text);
-
-                // ดึงข้อความประเภทไฟล์จากช่องกรอง ตัดช่องว่าง และแปลงเป็นอักษรพิมพ์เล็ก
                 string fileTypeFilter = txtFilter.Text.Trim().ToLower();
 
-                int currentLine = 0; // ตัวนับแถวปัจจุบัน
+                int currentLine = 0;
 
                 using (StreamReader srReader = new StreamReader(tbFileName.Text))
                 {
                     string strLine;
                     bool bHeaderRead = false;
 
-                    // ลูปอ่านทีละบรรทัด (ใช้ StreamReader เครื่องจะไม่ค้างแม้ไฟล์มีข้อมูลเยอะ)
                     while ((strLine = srReader.ReadLine()) != null)
                     {
                         string[] strHeaders_arr = null;
 
-                        // ข้ามบรรทัดที่เป็น Comment ของอาจารย์ (#)
                         if (strLine.StartsWith("#"))
                         {
                             if (strLine.Length > 8 && strLine.Substring(0, 8).Equals("#HEADER"))
@@ -109,35 +92,51 @@ namespace FileProcessing
 
                         string[] strValues_arr = strLine.Split(',');
 
-                        // 1. จัดการหัวตารางก่อน (ให้แสดงหัวตารางเสมอ)
+                        // 1. สร้างหัวตารางในแถวแรกเสมอ
                         if (!bHeaderRead)
                         {
                             foreach (string strHeader in strValues_arr)
                             {
-                                if (strHeaders_arr == null)
-                                    dgvData.Columns.Add(strHeader.Trim(), strHeader.Trim());
-                                else
-                                    dgvData.Columns.Add(strHeader.Trim(), strHeaders_arr[dgvData.Columns.Count].Trim());
+                                string cleanHeader = strHeader.Replace("\"", "").Trim();
+                                dgvData.Columns.Add(cleanHeader, cleanHeader);
                             }
                             bHeaderRead = true;
-                            continue; // วิ่งไปอ่านแถวถัดไปที่เป็นข้อมูลจริง
+                            continue;
                         }
 
-                        // นับแถวข้อมูลจริงหลังจากผ่านหัวตารางมาแล้ว
                         currentLine++;
 
-                        // 2. ตรวจสอบเงื่อนไขช่วงแถว m ถึง n
+                        // 2. เช็กช่วงแถว m ถึง n
                         if (currentLine >= m && currentLine <= n)
                         {
-                            // 3. ตรวจสอบตัวกรองประเภทไฟล์ 
-                            // (ถ้าไม่ได้กรอกตัวกรองไว้ หรือข้อมูลในแถวนั้นมีคำที่ค้นหาอยู่ ก็ให้แสดงผล)
-                            if (string.IsNullOrEmpty(fileTypeFilter) || strLine.ToLower().Contains(fileTypeFilter))
+                            // 3. กรองแบบอัจฉริยะ: ค้นหาคำแบบเป๊ะๆ ในทุกๆ ช่องของแถว
+                            if (string.IsNullOrEmpty(fileTypeFilter))
                             {
+                                // ถ้าไม่ได้กรอกช่องกรอง ให้แสดงผลตามปกติ
                                 dgvData.Rows.Add(strValues_arr);
+                            }
+                            else
+                            {
+                                bool isMatch = false;
+                                foreach (string value in strValues_arr)
+                                {
+                                    // ลบเครื่องหมายคำพูดออกก่อน แล้วเช็กว่าคำตรงกับที่พิมเป๊ะๆ ไหม (ป้องกันโดนคำว่า abuse_ch หลอก)
+                                    string cleanValue = value.Replace("\"", "").Trim().ToLower();
+                                    if (cleanValue.Equals(fileTypeFilter))
+                                    {
+                                        isMatch = true;
+                                        break; // เจอแล้วให้หยุดลูปทันที
+                                    }
+                                }
+
+                                // ถ้าเจอช่องที่มีคำตรงเป๊ะๆ ให้แอดขึ้นตาราง
+                                if (isMatch)
+                                {
+                                    dgvData.Rows.Add(strValues_arr);
+                                }
                             }
                         }
 
-                        // ถ้าอ่านเกินแถวที่ n แล้ว ให้หยุดอ่านทันทีเพื่อประหยัดทรัพยากรเครื่อง
                         if (currentLine > n)
                         {
                             break;
@@ -152,9 +151,6 @@ namespace FileProcessing
             }
         }
 
-        /// <summary>
-        /// Handles the Click event of the Browse button to select a file from computer.
-        /// </summary>
         private void btBrowse_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog())
@@ -167,13 +163,9 @@ namespace FileProcessing
             }
         }
 
-        /// <summary>
-        /// Handles the Click event of the new Filter button by triggering the main CSV reader.
-        /// </summary>
         private void btnFilterRun_Click(object sender, EventArgs e)
         {
-            // สั่งให้ฟังก์ชันหลัก (btReadCSV_Click) ทำงานประมวลผลทันที โดยใช้ค่า m, n, filter ที่พิมบนหน้าจอ UI
             btReadCSV_Click(sender, e);
         }
-    }   // End of frmTextView class
+    }
 }
