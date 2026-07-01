@@ -59,60 +59,95 @@ namespace FileProcessing
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The event data.</param>
 		private void btReadCSV_Click(object sender, EventArgs e)
-		{
-            using (StreamReader srReader = new StreamReader(tbFileName.Text))
+        {
+            // ตรวจสอบว่าเลือกไฟล์หรือยัง
+            if (string.IsNullOrEmpty(tbFileName.Text) || !File.Exists(tbFileName.Text))
             {
-                string strLine; // Variable to hold each line read from the file
-				bool bHeaderRead = false;   // Flag to indicate whether the header line has been read
+                MessageBox.Show("กรุณาเลือกไฟล์ CSV ก่อนจ้า!", "แจ้งเตือน");
+                return;
+            }
 
-				// Main loop: Read the file line by line
-				while ((strLine = srReader.ReadLine()) != null)
+            // เคลียร์ข้อมูลในตารางเก่าออกก่อนทุกครั้งที่กดโหลดใหม่
+            dgvData.Rows.Clear();
+            dgvData.Columns.Clear();
+
+            try
+            {
+                // ---------------------------------------------------------------
+                // [ตั้งค่าตัวแปรตรงนี้เพื่อทดสอบส่งอาจารย์ได้เลยจ้า]
+                int m = 10;                // แถวเริ่มต้นที่ต้องการโหลด (โจทย์ข้อ 2)
+                int n = 50;                // แถวสิ้นสุดที่ต้องการโหลด (โจทย์ข้อ 2)
+                string fileTypeFilter = "exe"; // ประเภทไฟล์ที่ต้องการกรอง (โจทย์ข้อ 3)
+                                               // ---------------------------------------------------------------
+
+                int currentLine = 0; // ตัวนับแถวปัจจุบัน
+
+                using (StreamReader srReader = new StreamReader(tbFileName.Text))
                 {
-                    string[] strHeaders_arr = null;
-					// Skip comment lines and check for header line
-					if (strLine.StartsWith("#")) 
-                    { 
-                        if (    strLine.Length > 8
-                           &&   strLine.Substring(0, 8).Equals("#HEADER") 
-                           )
-                        {
-							// Read the header line and split it into an array of headers
-							strHeaders_arr = strLine.Substring(8).Split(',');
-						}
-                        continue;
-                    }
-					// Split the current line into an array of values
-					string[] strValues_arr = strLine.Split(',');
+                    string strLine;
+                    bool bHeaderRead = false;
 
-					// If the header has not been read yet, add the headers to the DataGridView columns
-					if (!bHeaderRead)
+                    // ลูปอ่านทีละบรรทัด (โจทย์ข้อ 1: ใช้ StreamReader เครื่องจะไม่ค้างแม้ไฟล์มี 1 ล้านแถว)
+                    while ((strLine = srReader.ReadLine()) != null)
                     {
-						// Add the headers to the DataGridView columns, using the header names from the header line if available
-						foreach (string strHeader in strValues_arr)
-                        {
-                            if ( strHeaders_arr == null )
-                                dgvData.Columns.Add(strHeader.Trim(), strHeader.Trim());
-                            else
-                                dgvData.Columns.Add(strHeader.Trim(), strHeaders_arr[dgvData.Columns.Count].Trim());
-						}
-                        bHeaderRead = true;
-                    }
-                    else
-                    {
-						// Add the values to the DataGridView rows
-						dgvData.Rows.Add(strValues_arr);
-                    }
-				}   // Main loop: Read the file line by line
-			}
+                        string[] strHeaders_arr = null;
 
-		}
-		/// <summary>
-		/// Handles the Click event of the Browse button, allowing the user to select a file and displaying its path in the
-		/// file name text box.
-		/// </summary>
-		/// <param name="sender">The source of the event.</param>
-		/// <param name="e">The event data.</param>
-		private void btBrowse_Click(object sender, EventArgs e)
+                        // ข้ามบรรทัดที่เป็น Comment ของอาจารย์ (#)
+                        if (strLine.StartsWith("#"))
+                        {
+                            if (strLine.Length > 8 && strLine.Substring(0, 8).Equals("#HEADER"))
+                            {
+                                strHeaders_arr = strLine.Substring(8).Split(',');
+                            }
+                            continue;
+                        }
+
+                        string[] strValues_arr = strLine.Split(',');
+
+                        // 1. จัดการหัวตารางก่อน (ให้แสดงหัวตารางเสมอ)
+                        if (!bHeaderRead)
+                        {
+                            foreach (string strHeader in strValues_arr)
+                            {
+                                if (strHeaders_arr == null)
+                                    dgvData.Columns.Add(strHeader.Trim(), strHeader.Trim());
+                                else
+                                    dgvData.Columns.Add(strHeader.Trim(), strHeaders_arr[dgvData.Columns.Count].Trim());
+                            }
+                            bHeaderRead = true;
+                            continue; // วิ่งไปอ่านแถวถัดไปที่เป็นข้อมูลจริง
+                        }
+
+                        // นับแถวข้อมูลจริงหลังจากผ่านหัวตารางมาแล้ว
+                        currentLine++;
+
+                        // 2. ตรวจสอบเงื่อนไขช่วงแถว m ถึง n (โจทย์ข้อ 2)
+                        if (currentLine >= m && currentLine <= n)
+                        {
+                            // 3. ตรวจสอบตัวกรองประเภทไฟล์ (โจทย์ข้อ 3)
+                            // (โปรแกรมจะเช็กว่าในบรรทัดนั้นมีคำว่า exe หรือพิมพ์เล็กพิมพ์ใหญ่ตรงกันไหม)
+                            if (strLine.ToLower().Contains(fileTypeFilter.ToLower()))
+                            {
+                                // ถ้าตรงเงื่อนไขทั้งหมด ให้เพิ่มแถวลงตาราง DataGridView
+                                dgvData.Rows.Add(strValues_arr);
+                            }
+                        }
+
+                        // ถ้าอ่านเกินแถวที่ n แล้ว ให้หยุดอ่านทันทีเพื่อประหยัดความเร็ว
+                        if (currentLine > n)
+                        {
+                            break;
+                        }
+                    }
+                }
+                MessageBox.Show($"โหลดข้อมูลแถวที่ {m} ถึง {n} (กรองเฉพาะ: {fileTypeFilter}) เสร็จแล้วจ้า!", "สำเร็จ");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("เกิดข้อผิดพลาดในการโหลดไฟล์: " + ex.Message, "ข้อผิดพลาด");
+            }
+        }
+        private void btBrowse_Click(object sender, EventArgs e)
 		{
 			using (OpenFileDialog ofd = new OpenFileDialog())
 			{
