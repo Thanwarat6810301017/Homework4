@@ -200,21 +200,21 @@
             // 
             // txtFilter
             // 
-            this.txtFilter.Location = new System.Drawing.Point(250, 105);
+            this.txtFilter.Location = new System.Drawing.Point(262, 104);
             this.txtFilter.Name = "txtFilter";
             this.txtFilter.Size = new System.Drawing.Size(100, 22);
             this.txtFilter.TabIndex = 4;
             // 
             // txtM
             // 
-            this.txtM.Location = new System.Drawing.Point(250, 49);
+            this.txtM.Location = new System.Drawing.Point(262, 49);
             this.txtM.Name = "txtM";
             this.txtM.Size = new System.Drawing.Size(100, 22);
             this.txtM.TabIndex = 4;
             // 
             // txtN
             // 
-            this.txtN.Location = new System.Drawing.Point(250, 77);
+            this.txtN.Location = new System.Drawing.Point(262, 77);
             this.txtN.Name = "txtN";
             this.txtN.Size = new System.Drawing.Size(100, 22);
             this.txtN.TabIndex = 5;
