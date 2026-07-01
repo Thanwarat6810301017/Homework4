@@ -27,38 +27,43 @@ The included MalwareBazaar sample CSV has been modified:
 - Header format adjusted for teaching purposes
 See README.md for full details.
 */
+
 using System;
 using System.IO;
 using System.Windows.Forms;
 
 namespace FileProcessing
 {
-	public partial class frmTextView : Form
-	{
-		/// <summary>
-		/// Initializes a new instance of the frmTextView class.
-		/// </summary>
-		public frmTextView()
-		{
-			InitializeComponent();
-		}
-		/// <summary>
-		/// Handles the Click event of the Read button by loading the contents of the specified file into the display area.
-		/// </summary>
-		/// <param name="sender">The source of the event.</param>
-		/// <param name="e">The event data.</param>
-		private void btRead_Click(object sender, EventArgs e)
-		{			
+    public partial class frmTextView : Form
+    {
+        /// <summary>
+        /// Initializes a new instance of the frmTextView class.
+        /// </summary>
+        public frmTextView()
+        {
+            InitializeComponent();
+        }
+
+        /// <summary>
+        /// Handles the Click event of the Read button by loading the contents of the specified file into the display area.
+        /// </summary>
+        private void btRead_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(tbFileName.Text) || !File.Exists(tbFileName.Text))
+            {
+                MessageBox.Show("กรุณาเลือกไฟล์ก่อนจ้า!", "แจ้งเตือน");
+                return;
+            }
+
             string content = File.ReadAllText(tbFileName.Text);
             rtbShow.Text = content;
-		}
+        }
+
         /// <summary>
         /// Handles the Click event of the btReadCSV button, reading CSV data from the specified file and populating the
         /// DataGridView with its contents.
         /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The event data.</param>
-		private void btReadCSV_Click(object sender, EventArgs e)
+        private void btReadCSV_Click(object sender, EventArgs e)
         {
             // ตรวจสอบว่าเลือกไฟล์หรือยัง
             if (string.IsNullOrEmpty(tbFileName.Text) || !File.Exists(tbFileName.Text))
@@ -73,12 +78,12 @@ namespace FileProcessing
 
             try
             {
-                // ---------------------------------------------------------------
-                // [ตั้งค่าตัวแปรตรงนี้เพื่อทดสอบส่งอาจารย์ได้เลยจ้า]
-                int m = 10;                // แถวเริ่มต้นที่ต้องการโหลด (โจทย์ข้อ 2)
-                int n = 50;                // แถวสิ้นสุดที่ต้องการโหลด (โจทย์ข้อ 2)
-                string fileTypeFilter = "exe"; // ประเภทไฟล์ที่ต้องการกรอง (โจทย์ข้อ 3)
-                                               // ---------------------------------------------------------------
+                // ดึงค่าตัวเลขจากช่อง m และ n บนหน้าจอ (ถ้าช่องว่างจะตั้งค่า Default เป็น 1 และ 500)
+                int m = string.IsNullOrEmpty(txtM.Text) ? 1 : int.Parse(txtM.Text);
+                int n = string.IsNullOrEmpty(txtN.Text) ? 500 : int.Parse(txtN.Text);
+
+                // ดึงข้อความประเภทไฟล์จากช่องกรอง ตัดช่องว่าง และแปลงเป็นอักษรพิมพ์เล็ก
+                string fileTypeFilter = txtFilter.Text.Trim().ToLower();
 
                 int currentLine = 0; // ตัวนับแถวปัจจุบัน
 
@@ -87,7 +92,7 @@ namespace FileProcessing
                     string strLine;
                     bool bHeaderRead = false;
 
-                    // ลูปอ่านทีละบรรทัด (โจทย์ข้อ 1: ใช้ StreamReader เครื่องจะไม่ค้างแม้ไฟล์มี 1 ล้านแถว)
+                    // ลูปอ่านทีละบรรทัด (ใช้ StreamReader เครื่องจะไม่ค้างแม้ไฟล์มีข้อมูลเยอะ)
                     while ((strLine = srReader.ReadLine()) != null)
                     {
                         string[] strHeaders_arr = null;
@@ -121,19 +126,18 @@ namespace FileProcessing
                         // นับแถวข้อมูลจริงหลังจากผ่านหัวตารางมาแล้ว
                         currentLine++;
 
-                        // 2. ตรวจสอบเงื่อนไขช่วงแถว m ถึง n (โจทย์ข้อ 2)
+                        // 2. ตรวจสอบเงื่อนไขช่วงแถว m ถึง n
                         if (currentLine >= m && currentLine <= n)
                         {
-                            // 3. ตรวจสอบตัวกรองประเภทไฟล์ (โจทย์ข้อ 3)
-                            // (โปรแกรมจะเช็กว่าในบรรทัดนั้นมีคำว่า exe หรือพิมพ์เล็กพิมพ์ใหญ่ตรงกันไหม)
-                            if (strLine.ToLower().Contains(fileTypeFilter.ToLower()))
+                            // 3. ตรวจสอบตัวกรองประเภทไฟล์ 
+                            // (ถ้าไม่ได้กรอกตัวกรองไว้ หรือข้อมูลในแถวนั้นมีคำที่ค้นหาอยู่ ก็ให้แสดงผล)
+                            if (string.IsNullOrEmpty(fileTypeFilter) || strLine.ToLower().Contains(fileTypeFilter))
                             {
-                                // ถ้าตรงเงื่อนไขทั้งหมด ให้เพิ่มแถวลงตาราง DataGridView
                                 dgvData.Rows.Add(strValues_arr);
                             }
                         }
 
-                        // ถ้าอ่านเกินแถวที่ n แล้ว ให้หยุดอ่านทันทีเพื่อประหยัดความเร็ว
+                        // ถ้าอ่านเกินแถวที่ n แล้ว ให้หยุดอ่านทันทีเพื่อประหยัดทรัพยากรเครื่อง
                         if (currentLine > n)
                         {
                             break;
@@ -147,16 +151,29 @@ namespace FileProcessing
                 MessageBox.Show("เกิดข้อผิดพลาดในการโหลดไฟล์: " + ex.Message, "ข้อผิดพลาด");
             }
         }
+
+        /// <summary>
+        /// Handles the Click event of the Browse button to select a file from computer.
+        /// </summary>
         private void btBrowse_Click(object sender, EventArgs e)
-		{
-			using (OpenFileDialog ofd = new OpenFileDialog())
-			{
-				ofd.Filter = "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
-				if (ofd.ShowDialog() == DialogResult.OK)
-				{
-					tbFileName.Text = ofd.FileName;
-				}
-			}
-		}
-	}   // End of frmTextView class
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Filter = "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    tbFileName.Text = ofd.FileName;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the new Filter button by triggering the main CSV reader.
+        /// </summary>
+        private void btnFilterRun_Click(object sender, EventArgs e)
+        {
+            // สั่งให้ฟังก์ชันหลัก (btReadCSV_Click) ทำงานประมวลผลทันที โดยใช้ค่า m, n, filter ที่พิมบนหน้าจอ UI
+            btReadCSV_Click(sender, e);
+        }
+    }   // End of frmTextView class
 }
